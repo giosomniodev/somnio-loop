@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kanban Dashboard</title>
+
+  <!-- Tailwind CSS v4 (browser build) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+  <!-- shadcn/ui-style design tokens. Primary = #FF8912 -->
+  <style type="text/tailwindcss">
+    @theme {
+      --color-background: hsl(0 0% 100%);
+      --color-foreground: hsl(20 14% 12%);
+      --color-card: hsl(0 0% 100%);
+      --color-card-foreground: hsl(20 14% 12%);
+      --color-muted: hsl(30 20% 96%);
+      --color-muted-foreground: hsl(25 8% 45%);
+      --color-border: hsl(28 25% 90%);
+      --color-input: hsl(28 25% 90%);
+      --color-ring: hsl(33 100% 53%);
+
+      /* Brand primary: #FF8912 */
+      --color-primary: hsl(33 100% 53%);
+      --color-primary-foreground: hsl(0 0% 100%);
+
+      --color-secondary: hsl(30 30% 95%);
+      --color-secondary-foreground: hsl(20 14% 18%);
+      --color-destructive: hsl(0 72% 51%);
+
+      --radius: 0.65rem;
+    }
+
+    @layer base {
+      * { border-color: var(--color-border); }
+      body {
+        background-color: var(--color-background);
+        color: var(--color-foreground);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+    }
+  </style>
+</head>
+
+<body class="h-full bg-muted/40">
+
+  <!-- ============================================================= -->
+  <!-- LOGIN VIEW                                                     -->
+  <!-- ============================================================= -->
+  <main id="login-view" class="hidden min-h-screen w-full items-center justify-center px-4 py-12">
+    <div class="w-full max-w-sm">
+      <!-- Brand -->
+      <div class="mb-6 flex flex-col items-center gap-3 text-center">
+        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/30">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3zM14 3h7v4h-7zM14 11h7v10h-7zM3 14h7v7H3z"/></svg>
+        </div>
+        <div>
+          <h1 class="text-xl font-semibold tracking-tight">Kanban Dashboard</h1>
+          <p class="text-sm text-muted-foreground">Ingresá para gestionar tus tareas</p>
+        </div>
+      </div>
+
+      <!-- Card -->
+      <div class="rounded-xl border bg-card p-6 shadow-sm">
+        <form id="login-form" class="flex flex-col gap-4" novalidate>
+          <div class="flex flex-col gap-2">
+            <label for="username" class="text-sm font-medium leading-none">Usuario</label>
+            <input id="username" name="username" type="text" autocomplete="username" placeholder="admin"
+              class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 placeholder:text-muted-foreground" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label for="password" class="text-sm font-medium leading-none">Contraseña</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••"
+              class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 placeholder:text-muted-foreground" />
+          </div>
+
+          <p id="login-error" class="hidden text-sm font-medium text-destructive"></p>
+
+          <button type="submit"
+            class="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 active:scale-[.99]">
+            Iniciar sesión
+          </button>
+
+          <p class="text-center text-xs text-muted-foreground">
+            Demo: usuario <span class="font-medium text-foreground">admin</span> · clave <span class="font-medium text-foreground">admin</span>
+          </p>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============================================================= -->
+  <!-- DASHBOARD VIEW                                                 -->
+  <!-- ============================================================= -->
+  <div id="dashboard-view" class="hidden min-h-screen flex-col">
+    <!-- Topbar -->
+    <header class="sticky top-0 z-20 border-b bg-background/80 backdrop-blur">
+      <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+        <div class="flex items-center gap-3">
+          <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3zM14 3h7v4h-7zM14 11h7v10h-7zM3 14h7v7H3z"/></svg>
+          </div>
+          <div class="leading-tight">
+            <h1 class="text-sm font-semibold tracking-tight">Kanban Dashboard</h1>
+            <p class="text-xs text-muted-foreground">Tablero de tareas</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <div class="hidden text-right sm:block">
+            <p id="user-name" class="text-sm font-medium leading-tight">—</p>
+            <p class="font-mono text-[11px] text-muted-foreground" id="user-token">—</p>
+          </div>
+          <div class="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground" id="user-avatar">A</div>
+          <button id="logout-btn" title="Cerrar sesión"
+            class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-medium transition hover:bg-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span class="hidden sm:inline">Salir</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Board -->
+    <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
+      <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold tracking-tight">Mi tablero</h2>
+          <p class="text-sm text-muted-foreground">Arrastrá las tarjetas entre columnas para cambiar su estado.</p>
+        </div>
+        <button id="add-card-btn"
+          class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[.99]">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nueva tarjeta
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3" id="board" aria-label="Tablero Kanban"><!-- columns injected --></div>
+    </main>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- NEW CARD MODAL                                                 -->
+  <!-- ============================================================= -->
+  <div id="card-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="absolute inset-0 bg-black/50" data-close-modal></div>
+    <div class="relative w-full max-w-md rounded-xl border bg-card p-6 shadow-lg">
+      <h3 id="modal-title" class="text-lg font-semibold tracking-tight">Nueva tarjeta</h3>
+      <p class="mb-4 text-sm text-muted-foreground">Creá una tarea para tu tablero.</p>
+      <form id="card-form" class="flex flex-col gap-4">
+        <div class="flex flex-col gap-2">
+          <label for="card-title" class="text-sm font-medium leading-none">Título</label>
+          <input id="card-title" required maxlength="80" placeholder="Diseñar la landing"
+            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 placeholder:text-muted-foreground" />
+        </div>
+        <div class="flex flex-col gap-2">
+          <label for="card-desc" class="text-sm font-medium leading-none">Descripción <span class="text-muted-foreground">(opcional)</span></label>
+          <textarea id="card-desc" rows="3" maxlength="240" placeholder="Detalles de la tarea…"
+            class="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 placeholder:text-muted-foreground"></textarea>
+        </div>
+        <div class="flex flex-col gap-2">
+          <label for="card-column" class="text-sm font-medium leading-none">Columna</label>
+          <select id="card-column"
+            class="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1">
+            <option value="todo">To-Do</option>
+            <option value="in-progress">In Progress</option>
+            <option value="done">Done</option>
+          </select>
+        </div>
+        <div class="mt-2 flex justify-end gap-2">
+          <button type="button" data-close-modal
+            class="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium transition hover:bg-muted">Cancelar</button>
+          <button id="card-submit" type="submit" disabled
+            class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[.99] disabled:opacity-50 disabled:cursor-not-allowed">Agregar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  /* =================================================================
+     DOM HELPERS  —  construcción segura de nodos (sin innerHTML).
+     El contenido escrito por el usuario (título/descripción) siempre
+     entra como textContent, evitando XSS.
+     ================================================================= */
+  const SVGNS = 'http://www.w3.org/2000/svg';
+
+  function h(tag, attrs, ...children) {
+    if (attrs === undefined) attrs = {};
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'dataset') Object.assign(el.dataset, v);
+      else if (k === 'draggable') el.draggable = v;
+      else if (k === 'role') el.setAttribute('role', v);
+      else if (k === 'aria-label') el.setAttribute('aria-label', v);
+      else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
+      else el.setAttribute(k, v);
+    }
+    for (const child of children.flat()) {
+      if (child == null || child === false) continue;
+      el.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+    }
+    return el;
+  }
+
+  // Construye un <svg> de iconos tipo lucide a partir de specs [tag, attrs].
+  function icon(klass, viewBox, ...shapes) {
+    const s = document.createElementNS(SVGNS, 'svg');
+    s.setAttribute('class', klass);
+    s.setAttribute('viewBox', viewBox);
+    s.setAttribute('fill', 'none');
+    s.setAttribute('stroke', 'currentColor');
+    s.setAttribute('stroke-width', '2');
+    s.setAttribute('stroke-linecap', 'round');
+    s.setAttribute('stroke-linejoin', 'round');
+    for (const [tag, attrs] of shapes) {
+      const node = document.createElementNS(SVGNS, tag);
+      for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+      s.appendChild(node);
+    }
+    return s;
+  }
+
+  function trashIcon() {
+    return icon('h-4 w-4', '0 0 24 24',
+      ['polyline', { points: '3 6 5 6 21 6' }],
+      ['path', { d: 'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2' }]
+    );
+  }
+
+  /* =================================================================
+     AUTH LAYER  —  token UUID en localStorage
+     ================================================================= */
+  const TOKEN_KEY = 'kanban.auth.token';
+  const USER_KEY  = 'kanban.auth.user';
+  const BOARD_KEY = 'kanban.board.state';
+
+  // Credenciales demo (en una app real esto vive en el backend)
+  const DEMO_USER = { username: 'admin', password: 'admin' };
+
+  // uuidv4: uses crypto.randomUUID() with polyfill fallback
+  function uuidv4() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    // Polyfill fallback using crypto.getRandomValues
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    return [
+      hex.slice(0, 8),
+      hex.slice(8, 12),
+      hex.slice(12, 16),
+      hex.slice(16, 20),
+      hex.slice(20, 32),
+    ].join('-');
+  }
+
+  const auth = {
+    isAuthenticated: () => !!localStorage.getItem(TOKEN_KEY),
+    getToken: () => localStorage.getItem(TOKEN_KEY),
+    getUser:  () => localStorage.getItem(USER_KEY) || 'Usuario',
+    login(username, password) {
+      if (username === DEMO_USER.username && password === DEMO_USER.password) {
+        const token = uuidv4();
+        localStorage.setItem(TOKEN_KEY, token);
+        localStorage.setItem(USER_KEY, username);
+        return { ok: true, token };
+      }
+      return { ok: false, error: 'Usuario o contraseña incorrectos.' };
+    },
+    logout() {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+    }
+  };
+
+  /* =================================================================
+     ROUTER / GUARD  —  middleware que redirige según autenticación
+     ================================================================= */
+  const loginView = document.getElementById('login-view');
+  const dashboardView = document.getElementById('dashboard-view');
+
+  function showView(name) {
+    loginView.classList.toggle('hidden', name !== 'login');
+    loginView.classList.toggle('flex', name === 'login');
+    dashboardView.classList.toggle('hidden', name !== 'dashboard');
+    dashboardView.classList.toggle('flex', name === 'dashboard');
+  }
+
+  // El "middleware": toda navegación pasa por acá.
+  function guard() {
+    if (auth.isAuthenticated()) {
+      hydrateUserChrome();
+      renderBoard();
+      showView('dashboard');
+    } else {
+      showView('login');
+    }
+  }
+
+  function hydrateUserChrome() {
+    const user = auth.getUser();
+    const token = auth.getToken() || '';
+    document.getElementById('user-name').textContent = user;
+    // Show first 8 chars + ellipsis of UUID token (item D)
+    document.getElementById('user-token').textContent = token.slice(0, 8) + '…';
+    document.getElementById('user-avatar').textContent = user.charAt(0).toUpperCase();
+  }
+
+  /* =================================================================
+     LOGIN FORM
+     ================================================================= */
+  const loginForm = document.getElementById('login-form');
+  const loginError = document.getElementById('login-error');
+
+  loginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const res = auth.login(username, password);
+    if (res.ok) {
+      loginError.classList.add('hidden');
+      loginForm.reset();
+      guard();
+    } else {
+      loginError.textContent = res.error;
+      loginError.classList.remove('hidden');
+    }
+  });
+
+  document.getElementById('logout-btn').addEventListener('click', () => {
+    auth.logout();
+    guard();
+  });
+
+  /* =================================================================
+     KANBAN BOARD  —  estado + render + drag & drop + persistencia
+     ================================================================= */
+  // Exactly 3 columns: ids 'todo', 'in-progress', 'done'
+  const COLUMNS = [
+    { id: 'todo',        title: 'To-Do',       dot: 'bg-muted-foreground' },
+    { id: 'in-progress', title: 'In Progress', dot: 'bg-primary' },
+    { id: 'done',        title: 'Done',        dot: 'bg-emerald-500' },
+  ];
+
+  function seedState() {
+    return {
+      todo: [
+        { id: uuidv4(), title: 'Definir paleta de marca', desc: 'Color primario #FF8912 y escala neutra.' },
+        { id: uuidv4(), title: 'Wireframe del dashboard', desc: 'Layout de 3 columnas para el tablero.' },
+      ],
+      'in-progress': [
+        { id: uuidv4(), title: 'Componente de tarjeta', desc: 'Estilo shadcn/ui con borde y sombra suave.' },
+      ],
+      done: [
+        { id: uuidv4(), title: 'Setup de Tailwind v4', desc: 'Tokens de tema y variables CSS.' },
+      ],
+    };
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(BOARD_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (_) {}
+    const s = seedState();
+    saveState(s);
+    return s;
+  }
+
+  function saveState(state) {
+    try {
+      localStorage.setItem(BOARD_KEY, JSON.stringify(state));
+    } catch (_) {}
+  }
+
+  let board = loadState();
+
+  function cardEl(card) {
+    const deleteBtn = h('button', {
+      'data-delete': '',
+      class: 'opacity-0 transition group-hover:opacity-100 text-muted-foreground hover:text-destructive',
+      title: 'Eliminar',
+      type: 'button',
+      onclick: () => deleteCard(card.id),
+    }, trashIcon());
+
+    const header = h('div', { class: 'flex items-start justify-between gap-2' },
+      h('h4', { class: 'text-sm font-medium leading-snug' }, card.title),
+      deleteBtn
+    );
+
+    const children = [header];
+    if (card.desc) {
+      children.push(h('p', { class: 'mt-1.5 text-xs leading-relaxed text-muted-foreground' }, card.desc));
+    }
+
+    const el = h('article', {
+      // role="listitem" for accessibility (item C)
+      role: 'listitem',
+      class: 'group cursor-grab rounded-lg border bg-card p-3 shadow-sm transition hover:shadow-md active:cursor-grabbing',
+      draggable: true,
+      dataset: { cardId: card.id },
+    }, ...children);
+
+    // Drag-and-drop: dragstart sets dataTransfer text/plain to card.id (item 4)
+    el.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', card.id);
+      e.dataTransfer.effectAllowed = 'move';
+      requestAnimationFrame(() => el.classList.add('opacity-40', 'rotate-1'));
+    });
+    el.addEventListener('dragend', () => el.classList.remove('opacity-40', 'rotate-1'));
+
+    return el;
+  }
+
+  // Error boundary wrapper for renderBoard (item E)
+  function renderBoard() {
+    try {
+      _renderBoardImpl();
+    } catch (err) {
+      const root = document.getElementById('board');
+      if (root) {
+        root.replaceChildren();
+        const msg = h('p', { class: 'col-span-3 rounded-lg border border-destructive bg-destructive/5 p-6 text-center text-sm text-destructive' });
+        msg.textContent = 'Error al renderizar el tablero. Recargá la página o limpiá el almacenamiento local.';
+        root.appendChild(msg);
+      }
+      console.error('[Kanban] renderBoard error:', err);
+    }
+  }
+
+  function _renderBoardImpl() {
+    const root = document.getElementById('board');
+    root.replaceChildren();
+
+    COLUMNS.forEach(col => {
+      const cards = board[col.id] || [];
+
+      const head = h('div', { class: 'mb-3 flex items-center justify-between px-1' },
+        h('div', { class: 'flex items-center gap-2' },
+          h('span', { class: 'h-2 w-2 rounded-full ' + col.dot }),
+          h('h3', { class: 'text-sm font-semibold' }, col.title)
+        ),
+        h('span', { class: 'rounded-full bg-background px-2 py-0.5 text-xs font-medium text-muted-foreground' }, String(cards.length))
+      );
+
+      // role="list" on the drop zone div (item C)
+      const list = h('div', {
+        role: 'list',
+        class: 'flex min-h-24 flex-1 flex-col gap-2 rounded-lg p-1 transition',
+        dataset: { dropzone: col.id },
+      });
+
+      if (cards.length === 0) {
+        list.appendChild(h('p', {
+          class: 'pointer-events-none select-none px-2 py-6 text-center text-xs text-muted-foreground',
+        }, 'Sin tarjetas'));
+      } else {
+        cards.forEach(c => list.appendChild(cardEl(c)));
+      }
+
+      // Drop zone handlers — ring highlight uses Tailwind primary color classes (items 4 & 5)
+      list.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        list.classList.add('bg-primary/5', 'ring-2', 'ring-primary/40');
+      });
+      list.addEventListener('dragleave', (e) => {
+        if (!list.contains(e.relatedTarget)) {
+          list.classList.remove('bg-primary/5', 'ring-2', 'ring-primary/40');
+        }
+      });
+      list.addEventListener('drop', (e) => {
+        e.preventDefault();
+        list.classList.remove('bg-primary/5', 'ring-2', 'ring-primary/40');
+        // Read card id from dataTransfer text/plain, then call moveCard() (item 4)
+        const cardId = e.dataTransfer.getData('text/plain');
+        moveCard(cardId, col.id);
+      });
+
+      const column = h('section', {
+        class: 'flex flex-col rounded-xl border bg-muted/40 p-3',
+        dataset: { columnId: col.id },
+        'aria-label': col.title,
+      }, head, list);
+
+      root.appendChild(column);
+    });
+  }
+
+  function findCard(cardId) {
+    for (const colId of Object.keys(board)) {
+      const idx = board[colId].findIndex(c => c.id === cardId);
+      if (idx !== -1) return { colId, idx, card: board[colId][idx] };
+    }
+    return null;
+  }
+
+  function moveCard(cardId, targetCol) {
+    const found = findCard(cardId);
+    if (!found || found.colId === targetCol) return;
+    board[found.colId].splice(found.idx, 1);
+    if (!board[targetCol]) board[targetCol] = [];
+    board[targetCol].push(found.card);
+    saveState(board);
+    renderBoard();
+  }
+
+  // deleteCard: removes card, saves state, re-renders board (item 7)
+  function deleteCard(cardId) {
+    const found = findCard(cardId);
+    if (!found) return;
+    board[found.colId].splice(found.idx, 1);
+    saveState(board);
+    renderBoard();
+  }
+
+  function addCard({ title, desc, column }) {
+    if (!board[column]) board[column] = [];
+    board[column].unshift({ id: uuidv4(), title, desc });
+    saveState(board);
+    renderBoard();
+  }
+
+  /* =================================================================
+     NEW CARD MODAL
+     ================================================================= */
+  const modal = document.getElementById('card-modal');
+  const cardForm = document.getElementById('card-form');
+  const cardTitleInput = document.getElementById('card-title');
+  const cardSubmitBtn = document.getElementById('card-submit');
+
+  function openModal() {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    // Focus the card-title input when modal opens (item A)
+    cardTitleInput.focus();
+    // Ensure submit starts disabled (item B)
+    updateSubmitState();
+  }
+
+  function closeModal() {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    cardForm.reset();
+    // Reset submit button state after reset
+    updateSubmitState();
+  }
+
+  // Form validation: disable submit while title is empty (item B)
+  function updateSubmitState() {
+    const empty = cardTitleInput.value.trim() === '';
+    cardSubmitBtn.disabled = empty;
+  }
+
+  cardTitleInput.addEventListener('input', updateSubmitState);
+
+  document.getElementById('add-card-btn').addEventListener('click', openModal);
+  modal.querySelectorAll('[data-close-modal]').forEach(el => el.addEventListener('click', closeModal));
+
+  // Escape key closes modal (item 6)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  cardForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const title = cardTitleInput.value.trim();
+    if (!title) return;
+    addCard({
+      title,
+      desc: document.getElementById('card-desc').value.trim(),
+      column: document.getElementById('card-column').value,
+    });
+    closeModal();
+  });
+
+  /* =================================================================
+     BOOT  —  guard() decides which view to show (items 1 & 10)
+     ================================================================= */
+  guard();
+  </script>
+</body>
+</html>

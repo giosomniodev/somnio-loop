@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          JSON_VERSION=$(grep -m1 '"version"' .claude-plugin/plugin.json | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
+          if [[ "${VERSION}" != "${JSON_VERSION}" ]]; then
+            echo "FAIL: tag v${VERSION} doesn't match plugin.json version ${JSON_VERSION}"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Build plugin
+        run: |
+          chmod +x scripts/build-plugin.sh
+          ./scripts/build-plugin.sh somnio-loop.plugin
+
+      - name: Extract changelog section for this version
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          awk -v ver="$VERSION" '
+            /^## \[/{ if (found) exit; if ($0 ~ "\\["ver"\\]") found=1; next }
+            found
+          ' CHANGELOG.md > release-notes.md
+          cat release-notes.md
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: somnio-loop v${{ steps.version.outputs.version }}
+          body_path: release-notes.md
+          files: somnio-loop.plugin
+          draft: false
+          prerelease: false

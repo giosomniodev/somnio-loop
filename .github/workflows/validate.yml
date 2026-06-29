@@ -1,0 +1,74 @@
+name: Validate plugin
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate plugin.json schema
+        run: |
+          python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"
+
+      - name: Check skill frontmatter — no angle brackets in descriptions
+        run: |
+          # Common validator failure: <slug> in description fields is parsed as XML
+          if grep -rE '^description:.*<[a-zA-Z]' skills/ agents/ 2>/dev/null; then
+            echo "FAIL: angle brackets found in description frontmatter (use [slug] not <slug>)"
+            exit 1
+          fi
+          echo "OK: no angle brackets in description frontmatter"
+
+      - name: Check all skill SKILL.md files have name + description frontmatter
+        run: |
+          for f in skills/*/SKILL.md agents/*.md; do
+            if ! head -5 "$f" | grep -q '^name:'; then
+              echo "FAIL: $f missing 'name:' frontmatter"
+              exit 1
+            fi
+            if ! head -5 "$f" | grep -q '^description:'; then
+              echo "FAIL: $f missing 'description:' frontmatter"
+              exit 1
+            fi
+          done
+          echo "OK: all SKILL.md and agent .md have required frontmatter"
+
+      - name: Check folder structure
+        run: |
+          required_files=(
+            ".claude-plugin/plugin.json"
+            "README.md"
+            "LICENSE"
+            "skills/do/SKILL.md"
+            "agents/triage.md"
+            "agents/loop-runtime.md"
+            "agents/spec-writer.md"
+            "agents/verifier.md"
+            "references/universal-commands.md"
+            "references/manifest-types.md"
+            "references/state-spine.md"
+            "references/autonomy-config.md"
+            "references/mcp-integrations.md"
+            "references/anti-patterns-checklist.md"
+            "references/maturity-model.md"
+          )
+          for f in "${required_files[@]}"; do
+            if [[ ! -f "$f" ]]; then
+              echo "FAIL: missing required file: $f"
+              exit 1
+            fi
+          done
+          echo "OK: required structure present"
+
+      - name: Build .plugin (dry run)
+        run: |
+          chmod +x scripts/build-plugin.sh
+          ./scripts/build-plugin.sh /tmp/somnio-loop-test.plugin
+          unzip -l /tmp/somnio-loop-test.plugin > /dev/null
+          echo "OK: .plugin builds and is a valid zip"
