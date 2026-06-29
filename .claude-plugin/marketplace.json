@@ -1,0 +1,13 @@
+{
+  "name": "somnio-loop",
+  "description": "Marketplace hosting the somnio-loop plugin — autonomous agentic loop orchestration for Claude Code.",
+  "owner": {
+    "name": "Somnio"
+  },
+  "plugins": [
+    {
+      "name": "somnio-loop",
+      "source": "."
+    }
+  ]
+}
