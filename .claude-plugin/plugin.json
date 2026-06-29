@@ -1,6 +1,6 @@
 {
   "name": "somnio-loop",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Tomá un ticket — research, docs, desarrollo o decisión arquitectónica. El plugin decide arquetipo (orchestrator-workers / plan-execute / self-healing / generate-spec / adr), despacha sub-agents en olas paralelas, registra decisiones como ADR-NNN.md, escribe specs validados de 20 secciones con §10 locked al ADR, implementa código con self-healing contra tests/lint/typecheck, detecta PR/MR conflicts y entrega artefacto final con run-report observable. Implementa Loop Engineering sobre Claude Code.",
   "author": {
     "name": "Somnio"

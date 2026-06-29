@@ -3,7 +3,7 @@
 > **Ticket in. Deliverable out.** Autonomous agentic loop orchestration for Claude Code — research, docs, code, or architecture decisions, in any stack.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.7.0-3ee8c5)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.8.0-3ee8c5)](CHANGELOG.md)
 [![Validate](https://github.com/giosomniodev/somnio-loop/actions/workflows/validate.yml/badge.svg)](https://github.com/giosomniodev/somnio-loop/actions/workflows/validate.yml)
 
 ---
@@ -102,9 +102,28 @@ The plugin **does not bundle its own MCP servers**. It discovers whatever you ha
 
 Configure them in `.loop/config.yaml` under `mcp_integrations`. Full vendor adapter details in [`references/mcp-integrations.md`](references/mcp-integrations.md).
 
+## Git Flow integration (v0.8.0)
+
+Triage classifies every code-writing ticket into one of 8 types and applies the corresponding Git Flow convention. Defaults assume Vincent Driessen's Git Flow (main + develop); GitHub Flow and trunk-based dev are supported via config overrides.
+
+| Type | Branch | Base | PR target |
+|---|---|---|---|
+| `feature` | `feature/{ticket_id}-{slug}` | develop | develop |
+| `bugfix` | `bugfix/{ticket_id}-{slug}` | develop | develop |
+| `hotfix` | `hotfix/{ticket_id}-{slug}` | main | main + back-merge to develop |
+| `release` | `release/{version}` | develop | main + back-merge to develop |
+| `chore` | `chore/{ticket_id}-{slug}` | develop | develop |
+| `docs` | `docs/{ticket_id}-{slug}` | develop | develop |
+| `refactor` | `refactor/{ticket_id}-{slug}` | develop | develop |
+| `spike` | `spike/{ticket_id}-{slug}` | develop | develop |
+
+Critical guarantee: **your HEAD is invariant.** The plugin works in a dedicated git worktree, never `git checkout`s your repo. After each run, `git status` on your working tree shows no changes (unless your repo had untracked files before — those stay).
+
+Full schema in [`references/git-flow.md`](references/git-flow.md).
+
 ## Safety floor (non-negotiable)
 
-These six rules apply to every preset, including `minimal`:
+These eight rules apply to every preset, including `minimal`:
 
 1. **Never auto-merge PRs.** Plugin produces a branch and a PR description; humans merge.
 2. **Never push to `main`, `master`, `production`, or `release/*`.**
@@ -112,6 +131,8 @@ These six rules apply to every preset, including `minimal`:
 4. **Never silently override a documented rule** in `.rules`/`AGENTS.md`/`CLAUDE.md`. The plugin asks or aborts — never `proceed`.
 5. **PR always opened as draft.** You upgrade to "ready for review" manually.
 6. **Ticket status capped at `In Review`.** Never `Done` / `Closed` automatically.
+7. **Hotfix detection always surfaces confirmation** — even on `autonomy: minimal`. Production paths warrant friction.
+8. **User's HEAD is invariant.** The plugin verifies before-and-after that `git rev-parse HEAD` and `git branch --show-current` are unchanged. Violation aborts the run with `INVARIANT VIOLATED`.
 
 ## Architecture
 
@@ -234,6 +255,7 @@ The plugin owns a single directory at your repo root, created on first run:
   - [`mcp-integrations.md`](references/mcp-integrations.md) — Jira / Linear / GitHub / Slack adapters
   - [`anti-patterns-checklist.md`](references/anti-patterns-checklist.md) — 10 anti-patterns triage refuses
   - [`maturity-model.md`](references/maturity-model.md) — L0/L1/L2/L3 readiness levels
+  - [`git-flow.md`](references/git-flow.md) — Git Flow integration: 8 ticket types, branch patterns, base + PR target per type
 
 ## Roadmap
 

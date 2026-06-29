@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-OWNER="${1:-somnio}"
+OWNER="${1:-giosomniodev}"
 VISIBILITY="${2:-public}"
 TAG_MODE="${3:-tag}"
 REPO_NAME="somnio-loop"

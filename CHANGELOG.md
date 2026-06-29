@@ -2,6 +2,31 @@
 
 All notable changes to `somnio-loop` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] — 2026-06-27 — Git Flow integration + HEAD invariant fix
+
+### Added
+
+- `references/git-flow.md` — full Git Flow integration documentation: 8 ticket types, branch patterns, base branches, PR targets, conventional commit messages.
+- Triage classifies every code ticket into one of 8 types: `feature`, `bugfix`, `hotfix`, `release`, `chore`, `docs`, `refactor`, `spike`. Emits `ticket_type` and `slug` in plan.yml.
+- `.loop/config.yaml` schema extended with `git_flow.*` section: `base_branch`, `main_branch`, `branch_patterns`, `pr_targets`, `commit_message`, `follow_up`. Defaults assume Driessen's Git Flow (main + develop).
+- GitHub Flow and trunk-based development supported via config overrides (set `base_branch: main` for all types).
+- Spec-writer PR description gains `## Branch & target` section showing branch name + PR target + back-merge follow-up.
+- Conventional commit message generation per ticket_type (`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, etc.).
+- Hotfix and release back-merge to develop gated via `follow_up.hotfix_back_merge_to_develop` and `follow_up.release_back_merge_to_develop`.
+
+### Fixed (CRITICAL)
+
+- **Self-healing no longer touches the user's HEAD.** v0.7.0 used `git checkout -B loop-merge-<id> HEAD`, which silently switched the user's working tree from their current branch (e.g. develop) to the merge branch. v0.8.0 uses a dedicated merge worktree at `<run_dir>/merge-wt`, leaving the user's checkout invariant. After each run, the runtime verifies `git rev-parse HEAD` and `git branch --show-current` are unchanged; if not, aborts with `INVARIANT VIOLATED`.
+
+### Safety floor extensions (non-configurable)
+
+7. **Hotfix detection always surfaces confirmation.** Even on `autonomy: minimal`, triage requires explicit user confirmation before creating a `hotfix/*` branch from main.
+8. **User's HEAD is invariant.** Any operation that switches the user's working tree is forbidden and detected post-run.
+
+### Migration from v0.7.x
+
+Zero action required for default Git Flow users. If `git_flow.enabled: false` (or section omitted), behavior matches v0.7.x: single `loop/<ticket_id>` branch, no type classification. For GitHub Flow, set `git_flow.base_branch: main` and all `pr_targets.*: main`.
+
 ## [0.7.0] — 2026-06-27 — Rebrand to Somnio
 
 ### Changed (breaking)
