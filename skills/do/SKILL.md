@@ -41,20 +41,106 @@ If any check 1–6 fails, you do not proceed to Phase 0. Steps 7 and 8 fail soft
 
 The active autonomy + per-gate config + `<mcp_tools>` are held in memory and propagated to every sub-agent that may use them (triage, adr-author, spec-writer dev-mode, etc.).
 
-### Phase 0 — Acknowledge and lock the ticket
+### Phase 0 — Acknowledge + IMMEDIATE surface + checkpoint (v0.8.1)
+
+#### 0a. Acknowledge the ticket
 
 In ONE sentence, restate what you understand the ticket asks for. Reference any relevant Watch List item from STATE if applicable (e.g. "This continues TKT-007 from last run"). Do not ask clarifying questions yet. If a critical input is genuinely missing (e.g. the user said "compare these tools" but listed none), and only then, ask for that single missing input.
 
-### Phase 1 — Triage (dispatch the `triage` sub-agent)
+#### 0b. MANDATORY surface (v0.8.1 — BEFORE any sub-agent dispatch)
 
-Spawn the `triage` sub-agent (defined in `agents/triage.md`) using the Agent tool. Pass it the full ticket verbatim. The triage agent returns a `plan.yml` describing:
+**This is the most important addition in v0.8.1.** v0.8.0 surfaced these lines only AFTER triage returned, which means if triage hung or died (a real failure mode observed in production), the user saw nothing and couldn't tell what happened. v0.8.1 surfaces them IMMEDIATELY at Phase 0 using config defaults + history-derived best guess. Triage may correct any of these values later — if it does, re-surface with `(updated by triage)`.
 
-- Phases (ordered, with explicit dependencies)
-- For each phase: the archetype (`orchestrator-workers`, `plan-execute`, `self-healing`, `generate-spec` or `adr`), the worker model, the number of workers, and the expected artifact
-- Termination criteria and budget caps
-- **`readiness_level`** at the top level of the plan (L0 / L1 / L2 / L3)
+Print these FOUR lines verbatim, in this order, before proceeding to Phase 1:
 
-Save the plan to `/tmp/loop-runs/<timestamp>/plan.yml`.
+```
+🎫 Ticket: <source>:<id> — "<short title>"          # source = jira | linear | github | manual
+🎚 Readiness level: <L> (<label>) — <rationale>     # derived from run-log; default L1 if no history
+🎛 Autonomy: <preset> (<source>)                    # from config.yaml or ticket override
+🌳 Git Flow: ticket_type=<inferred>, base=<branch>, branch=<computed>   # only if dev-shaped
+```
+
+Inference rules for these defaults (used when triage hasn't returned yet):
+- `readiness_level`: count successful runs of this archetype in run-log; 0 → L1, 1 → L2, ≥3 marked safe → L3.
+- `autonomy`: from `.loop/config.yaml` (`autonomy.preset`) or `--autonomy=X` override.
+- `ticket_type`: from `git_flow.ticket_type_detection.auto` heuristics on the ticket text (verbs `add/implement` → feature, `fix/error` → bugfix, `hotfix/P0/production` → hotfix, etc.). If non-development (research/docs/ADR pure), omit the `🌳` line entirely.
+
+If any of these cannot be inferred (config missing, etc.), still print the line with `(unknown — will refine after triage)`.
+
+#### 0c. Checkpoint to run-log IMMEDIATELY (v0.8.1)
+
+Before dispatching triage, append an initial entry to `.loop/run-log.md`:
+
+```markdown
+## <ISO-8601 ts> — <ticket_id>
+
+- **Status:** in_progress
+- **Phase:** 0 (acknowledged + initial surface)
+- **Readiness level:** <as surfaced>
+- **Autonomy:** <as surfaced>
+- **Ticket type:** <as surfaced>
+- **Started:** <ts>
+- **Run dir:** /tmp/loop-runs/<ts>/
+```
+
+Update this entry's Phase + Status fields AFTER each subsequent phase completes. The Phase 7 final write replaces the in_progress entry with the completed run summary.
+
+**Critical:** without this checkpoint, if the run dies between Phase 1 and Phase 7 (a real failure mode observed in v0.8.0), the run-log is empty and forensics are impossible. Always write the checkpoint BEFORE dispatching triage.
+
+### Phase 1 — Triage dispatch + plan.yml verification (v0.8.1 hardened)
+
+#### 1a. HARD RULE — orchestrator NEVER writes plan.yml
+
+You as the orchestrator (the agent running this `do` skill) **NEVER** write `plan.yml` directly. Only the `triage` sub-agent writes it. After dispatching triage:
+
+- You wait for its return.
+- You may read other files in parallel for context (CLAUDE.md, conventions, etc.).
+- You may NOT write plan.yml yourself, not even to "speed things up" or "consolidate triage's findings."
+- The phrase "Now I have all the information needed. Let me write the plan." is a v0.8.0 anti-pattern observed in production. **Do not say this. Do not write the plan.** Wait for triage.
+
+#### 1b. Dispatch the triage sub-agent
+
+Spawn the `triage` sub-agent (defined in `agents/triage.md`) using the Agent tool. Pass it:
+
+- Path to `ticket.md` (NOT the ticket text inline — keep the prompt small)
+- Path to `.loop/config.yaml`
+- Path to `<repo_root>/CLAUDE.md` if it exists (path only, do not inline)
+- The target path for the plan: `/tmp/loop-runs/<timestamp>/plan.yml`
+- The exact mandatory schema fields (see `agents/triage.md` §Output)
+
+Keep your dispatch prompt under 2000 tokens. Trim the context to file paths and 3-5 specific instructions. v0.8.0's dispatch prompts hit context-blow-up because they inlined CLAUDE.md verbatim plus extensive constraints.
+
+#### 1c. VERIFY plan.yml exists after triage returns (v0.8.1)
+
+Immediately after the Agent tool returns from the triage dispatch:
+
+```bash
+test -f /tmp/loop-runs/<ts>/plan.yml || echo "MISSING"
+```
+
+If plan.yml is MISSING or empty:
+1. **First failure**: re-dispatch triage ONE time with the corrective prompt: *"The previous dispatch did not produce /tmp/loop-runs/<ts>/plan.yml. Write the plan file as your FIRST action — even a minimal skeleton — before any analysis. Then refine it. The orchestrator cannot proceed without it."*
+2. **Second failure**: abort the run with `status: triage_failed` and update the run-log checkpoint with the failure reason. Surface to user: *"❌ Triage failed to produce plan.yml after 2 attempts. Run aborted. See `/tmp/loop-runs/<ts>/` for any partial state."*
+
+If plan.yml exists and is non-empty, parse it and validate it has the required fields (see Phase 2). Only proceed past Phase 1 when plan.yml is verified.
+
+#### 1d. Update the run-log checkpoint
+
+After Phase 1 succeeds, update the in_progress entry in `.loop/run-log.md`:
+
+```
+- **Phase:** 1 (triage complete — plan.yml verified)
+```
+
+#### 1e. Re-surface readiness/autonomy with triage's values (if changed)
+
+If triage's plan.yml has values for `readiness_level`, `autonomy_preset`, or `ticket_type` that differ from the Phase 0b surface, re-print the affected line with `(updated by triage)`:
+
+```
+🎚 Readiness level: L2 (assisted) — 1 successful run of similar archetype. (updated by triage)
+```
+
+If unchanged, do not re-print — keep chat clean.
 
 **MANDATORY surfacing (v0.4.1 + v0.5.0):** Immediately after the plan is parsed, print TWO lines to the user before any other phase begins:
 

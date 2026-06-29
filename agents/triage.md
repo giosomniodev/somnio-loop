@@ -29,7 +29,41 @@ The ticket is the ONLY source of truth for what to do. While planning:
 
 The spec-writer and workers downstream will be told the same rule. Context bleed is a critical-severity bug.
 
-## Your output
+## Your output (v0.8.1 — write skeleton FIRST, refine after)
+
+**CRITICAL v0.8.1 — your FIRST action is to write a minimal skeleton plan.yml.** Then refine it. v0.8.0 production failures showed triage dispatches dying mid-analysis without ever writing the file, leaving the orchestrator hung. The fix: write the file first, even with placeholder content, then iterate.
+
+### Step 1 (do this BEFORE any deep analysis)
+
+Write `/tmp/loop-runs/<timestamp>/plan.yml` with this minimal skeleton:
+
+```yaml
+ticket_id: <from ticket text>
+ticket_summary: "<one-line restatement>"
+readiness_level: L1
+readiness_rationale: "Initial assessment, refining..."
+autonomy: balanced
+ticket_type: feature   # or whatever obvious from verbs
+slug: <kebab-case-short-title>
+phases:
+  - id: p1
+    name: <inferred from ticket>
+    archetype: <archetype>
+    status: skeleton    # marker that this entry is preliminary
+final_artifacts: []
+budget_caps:
+  estimated_tokens: 100000
+  estimated_usd: 2.00
+status: skeleton        # top-level marker
+```
+
+This skeleton is enough for the orchestrator to verify your dispatch produced output. If you die after this point, at least the run is debuggable.
+
+### Step 2 (after skeleton is written)
+
+Now do the full analysis and OVERWRITE plan.yml with the complete content per the schema below. Remove the `status: skeleton` markers when done. The orchestrator's verification in Phase 1c will detect the absence of `status: skeleton` as the signal that triage completed.
+
+### Full schema
 
 Write a single file: `/tmp/loop-runs/<timestamp>/plan.yml`. Format:
 

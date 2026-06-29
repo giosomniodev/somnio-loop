@@ -2,6 +2,38 @@
 
 All notable changes to `somnio-loop` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.1] — 2026-06-29 — Observability + triage-protection patches (from production failure)
+
+### Fixed (CRITICAL — from real production run)
+
+Real failure mode observed: on a Next.js monorepo with Jira ticket MH-1689, the orchestrator successfully fetched the ticket via Atlassian MCP, wrote ticket.md, dispatched triage as an Agent — and then **triage never returned with plan.yml**. The run died silently between Phase 1 and Phase 7. `.loop/run-log.md` was empty, `.loop/traces/` was empty, plan.yml never existed, and the user had zero visibility into where the run died.
+
+v0.8.1 addresses three concrete failure modes from this incident:
+
+#### 1. Surface MANDATORY at Phase 0 (before any dispatch)
+
+Previously the four observability lines (`🎫 Ticket`, `🎚 Readiness`, `🎛 Autonomy`, `🌳 Git Flow`) surfaced only AFTER triage returned. If triage hung, the user saw nothing. v0.8.1 prints these IMMEDIATELY at Phase 0 using config defaults + history-derived best guess. If triage later corrects any value, re-surface with `(updated by triage)` annotation.
+
+#### 2. Checkpoint to run-log IMMEDIATELY after Phase 0
+
+Previously the run-log entry was only appended at Phase 7 (end of run). If the run died before Phase 7, no record existed. v0.8.1 appends an `in_progress` entry to `.loop/run-log.md` BEFORE dispatching triage, and updates the Phase field after each subsequent phase completes. Forensics are now possible even when runs die mid-flight.
+
+#### 3. Triage skeleton-first + plan.yml verification + retry
+
+Three changes:
+
+- **`agents/triage.md`** now mandates writing a minimal skeleton plan.yml as the FIRST action (with `status: skeleton` marker), then refining it. This means if triage dies mid-analysis, at least a partial plan.yml exists.
+- **`skills/do/SKILL.md` Phase 1c** verifies plan.yml exists immediately after the triage Agent returns. If MISSING or empty, retries ONE time with a corrective prompt. If still missing, aborts with `status: triage_failed` and updates the run-log checkpoint with the failure reason. No more silent hangs.
+- **`skills/do/SKILL.md` Phase 1a** adds a HARD RULE: the orchestrator NEVER writes plan.yml directly. v0.8.0 production observed the orchestrator about to bypass triage and write the plan itself ("Now I have all the information needed. Let me write the plan."). v0.8.1 forbids this explicitly.
+
+### Changed
+
+- Phase 1 dispatch prompt trimmed: pass FILE PATHS (ticket.md, CLAUDE.md, config.yaml) not inlined content. v0.8.0's dispatches inlined CLAUDE.md verbatim plus extensive constraints, contributing to context-blow-up.
+
+### Migration from v0.8.0
+
+Zero action required. Re-install the plugin and the new behavior applies. Existing `.loop/config.yaml`, `.loop/state.md`, etc. unchanged.
+
 ## [0.8.0] — 2026-06-27 — Git Flow integration + HEAD invariant fix
 
 ### Added
