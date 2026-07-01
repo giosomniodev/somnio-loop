@@ -6,10 +6,59 @@ Lives at `<repo_root>/.loop/config.yaml`. Created from template on first run. Ed
 
 ## TL;DR
 
-- `autonomy.preset` is the dial. Three values get you most cases: `minimal`, `balanced`, `high`. Plus `custom` for fine control.
-- 6 named gates. Each can `ask` (default safe), `proceed` (max autonomy), `auto_fix` (try to recover), or `abort` (fail safe).
+- `autonomy.preset` is the ONLY dial you usually need. Three values cover 99% of cases: `minimal` (autonomous), `balanced` (safe default), `high` (max friction). Plus `custom` for fine control.
+- **Presets are self-contained (v0.8.2).** Setting `preset: minimal` implies ALL gate defaults for minimal. You do NOT need to spell out each gate — the preset knows.
+- 6 named gates exist internally but you only touch them when using `preset: custom`.
+- Observability is ALWAYS ON regardless of preset — surfacing lines, per-agent consumption table, run-report, STATE updates. Not configurable, always present.
 - Override per-run via the ticket text: `do "ticket... --autonomy=minimal"`.
 - 4 hard rules NEVER bend regardless of config: no auto-merge PRs, no push to main, no touching denylist paths, no overriding documented `.rules` violations silently.
+
+## Minimal viable config (v0.8.2)
+
+If your project uses Jira + GitHub, this 10-line config is complete:
+
+```yaml
+# .loop/config.yaml
+autonomy:
+  preset: minimal
+
+mcp_integrations:
+  ticket_source:
+    type: jira
+    project_key: "MH"
+
+  pr_target:
+    type: github
+    owner: "your-org"
+    repo: "your-repo"
+    base_branch: "develop"
+```
+
+That's it. The `preset: minimal` line implies all six gate defaults (proceed / auto_fix / use_defaults_and_flag / etc.). MCP fields describe your project. Observability is on by default.
+
+If you want the safer default behavior instead, change `preset: minimal` to `preset: balanced` (or omit it entirely — balanced is the built-in default).
+
+## Preset self-contained defaults
+
+Setting `preset: <name>` implies these gate values. You do NOT need to write them out.
+
+| Gate | `minimal` | `balanced` (default) | `high` |
+|---|---|---|---|
+| `budget_gate.on_exceed` | `proceed` | `ask` | `ask` |
+| `budget_gate.threshold_usd` | 5.00 | 1.50 | 0.50 |
+| `verifier_blocking_gate.on_blocking` | `auto_fix` (max 2 retries) | `ask` | `ask` |
+| `adr_conflict_gate.on_high_conflict` | `proceed_with_record` | `ask` | `ask` |
+| `adr_rule_violation_gate.on_violation` | `ask` (safety floor) | `ask` | `ask` |
+| `spec_clarification_gate.on_gaps` | `use_defaults_and_flag` | `ask` (max 5) | `ask` (max 10) |
+| `spec_clarification_gate.max_questions` | 0 | 5 | 10 |
+| `self_healing_exhaust_gate.on_exhausted` | `escalate_silent` | `ask` | `ask` |
+| `ticket_status_update_gate.on_complete` | `proceed` | `ask` | `ask` |
+| `pr_creation_gate.on_ready` | `proceed` (draft only) | `ask` | `ask` |
+| `notification_gate.enabled` | `false` (opt-in) | `false` | `false` |
+| Approval before every write | no | no | **yes** |
+| "Continue?" after each phase | no | no | **yes** |
+
+Override individually only with `preset: custom` (see below).
 
 ## Schema
 

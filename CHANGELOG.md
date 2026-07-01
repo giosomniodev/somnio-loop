@@ -2,6 +2,35 @@
 
 All notable changes to `somnio-loop` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.2] — 2026-06-29 — Minimal config + observability always-on
+
+### Changed
+
+- **Presets are now self-contained.** Setting `autonomy.preset: minimal` implies ALL six gate defaults (proceed / auto_fix / use_defaults_and_flag / etc.). Users no longer need to spell out `gates.budget_gate.on_exceed: proceed` etc. — the preset knows.
+- **Scaffolded config.yaml is now minimal.** On first run, the plugin writes a 3-4 line active template with the MCP block commented as reference — NOT a verbose expansion of every gate. Users can add `custom` overrides later if they need per-gate control.
+- **Observability is documented as always-on** (not a gate). Surfacing lines, run-log checkpoint, per-agent consumption table, run-report, STATE updates, trace.json — all happen every run regardless of preset. Presets control interruption points; they never disable audit trail.
+
+### Rationale
+
+v0.8.1 users had to write 30+ lines of config to get autonomous behavior (spelling out every gate override). v0.8.2 requires 10 lines: just the preset name + MCP endpoints. The preset lookup table in `references/autonomy-config.md` documents what each preset value expands to internally, for transparency.
+
+### Preset expansion table (documented in autonomy-config.md)
+
+| Gate | `minimal` | `balanced` (default) | `high` |
+|---|---|---|---|
+| `budget_gate.on_exceed` | proceed | ask | ask |
+| `verifier_blocking_gate.on_blocking` | auto_fix (2 retries) | ask | ask |
+| `adr_conflict_gate.on_high_conflict` | proceed_with_record | ask | ask |
+| `adr_rule_violation_gate.on_violation` | ask (safety floor) | ask | ask |
+| `spec_clarification_gate.on_gaps` | use_defaults_and_flag | ask (max 5) | ask (max 10) |
+| `self_healing_exhaust_gate.on_exhausted` | escalate_silent | ask | ask |
+| `ticket_status_update_gate.on_complete` | proceed | ask | ask |
+| `pr_creation_gate.on_ready` | proceed (draft) | ask | ask |
+
+### Migration
+
+Zero action required. Verbose configs from v0.8.1 continue to work (per-gate overrides still honored). New minimal configs work automatically. The scaffold template on first run is now minimal — existing configs are untouched.
+
 ## [0.8.1] — 2026-06-29 — Observability + triage-protection patches (from production failure)
 
 ### Fixed (CRITICAL — from real production run)

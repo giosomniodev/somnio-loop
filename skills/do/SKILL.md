@@ -27,7 +27,11 @@ Before anything else:
 2. Read `.loop/state.md` — pull current High Priority, Watch List, conventions snapshot.
 3. Read tail of `.loop/run-log.md` (last 10 entries) — use this to assess readiness level for the ticket archetype.
 4. Read `.loop/budget.md` — check `kill_switch.enabled`. If `true`, abort with the documented reason. Check remaining daily/weekly token + cost caps. If exhausted, abort with the cap that was hit.
-5. Read `.loop/config.yaml` — pull autonomy preset, per-gate behavior, AND the new `mcp_integrations` section (v0.6.0). If file missing, create from template (default `preset: balanced` + all `mcp_integrations.type: none`).
+5. Read `.loop/config.yaml`:
+   - Parse `autonomy.preset` — if `minimal | balanced | high`, expand to full gate defaults from the preset table in `references/autonomy-config.md`. Users only write the preset name; you fill in the gates from the built-in preset defaults.
+   - If `autonomy.preset: custom`, honor per-gate overrides from the config directly.
+   - Parse `mcp_integrations.*` — only the keys the user set. Missing keys default to `type: none`.
+   - If file missing, create from the MINIMAL template documented in `references/state-spine.md` — 3-4 lines active, MCP block commented. Do NOT scaffold a verbose config with every gate spelled out; v0.8.2 explicitly rejects that pattern.
 6. Check ticket text for per-run autonomy override — pattern `--autonomy=<minimal|balanced|high|custom>` at the end of the ticket. If found, overrides the file config for this run only.
 7. **MCP discovery (v0.6.0).** For each `mcp_integrations.*.type != "none"`, run `ToolSearch` with the patterns documented in `references/mcp-integrations.md` and cache the discovered tool names as `<mcp_tools>`. Failures are non-fatal unless `required: true` — log a warning and fall back to manual mode for that integration.
 8. **Ticket fetch (v0.6.0).** If the ticket text looks like a bare ticket ID (`TKT-123`, `PROJ-456`, `#789`, or just a numeric ID with `mcp_integrations.ticket_source` configured):

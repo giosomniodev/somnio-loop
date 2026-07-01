@@ -3,7 +3,7 @@
 > **Ticket in. Deliverable out.** Autonomous agentic loop orchestration for Claude Code — research, docs, code, or architecture decisions, in any stack.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.0-3ee8c5)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.8.2-3ee8c5)](CHANGELOG.md)
 [![Validate](https://github.com/giosomniodev/somnio-loop/actions/workflows/validate.yml/badge.svg)](https://github.com/giosomniodev/somnio-loop/actions/workflows/validate.yml)
 
 ---
@@ -70,9 +70,33 @@ Expected: ~3–5 minutes, ~$0.30–$0.50 USD for a research ticket of this size.
 
 Triage may combine archetypes into a 2–4 phase plan: ADR → spec → self-healing → PR description.
 
+## Minimal config (v0.8.2)
+
+The `.loop/config.yaml` file only needs the preset name plus your MCP setup — the preset implies all gate defaults. Here's a **complete** working config:
+
+```yaml
+# .loop/config.yaml
+autonomy:
+  preset: minimal   # or balanced (default) or high
+
+mcp_integrations:
+  ticket_source:
+    type: jira
+    project_key: "PROJ"
+  pr_target:
+    type: github
+    owner: "your-org"
+    repo: "your-repo"
+    base_branch: "develop"
+```
+
+10 lines. That's it. **You never have to spell out gate values.** The plugin knows what `minimal` / `balanced` / `high` mean and expands them internally.
+
+Observability (surface lines, per-agent consumption table, run-report, STATE updates) is **always on** — not a gate you configure. Every run leaves an audit trail regardless of preset.
+
 ## Autonomy presets
 
-Configurable per-project in `.loop/config.yaml` or per-run via `--autonomy=<preset>` appended to the ticket.
+Configurable per-project in `.loop/config.yaml` (one line) or per-run via `--autonomy=<preset>` appended to the ticket.
 
 | Preset | Behavior | Use when |
 |---|---|---|
