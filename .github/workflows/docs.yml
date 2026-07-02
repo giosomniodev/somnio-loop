@@ -33,7 +33,9 @@ jobs:
 
       - name: Serve and link check
         run: |
-          npx serve docs/out -l 4000 &
+          mkdir -p /tmp/serve-docs/somnio-loop
+          cp -r docs/out/. /tmp/serve-docs/somnio-loop/
+          npx serve /tmp/serve-docs -l 4000 &
           sleep 3
           npx linkinator http://localhost:4000/somnio-loop/ --recurse \
             --skip "^https?://(github\.com|twitter\.com|x\.com|www\.)" \
