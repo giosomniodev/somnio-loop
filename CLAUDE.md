@@ -111,6 +111,15 @@ Any change to a `skills/`, `agents/`, or `references/` file that introduces new 
 
 A commit that modifies plugin behavior without a matching `docs/` update must be considered incomplete and should not be merged.
 
+## Release procedure
+
+Always follow this order. Skipping step 1 causes CI to fail with "tag vX.Y.Z doesn't match plugin.json version".
+
+1. Bump `"version"` in `.claude-plugin/plugin.json` to the new version.
+2. Commit and push: `fix: bump plugin.json to X.Y.Z`
+3. Create annotated tag: `git tag -a vX.Y.Z -m "..."` and push it.
+4. Create GitHub release: `gh release create vX.Y.Z --title "..." --notes "..."`
+
 ## Plugin Manifest
 
 The Claude Code plugin manifest is at `.claude-plugin/plugin.json`. Key constraint: frontmatter `description` fields across all `skills/` and `agents/` `.md` files must never contain `<angle-bracket>` tokens — they are interpreted as XML tags and will break parsing.
