@@ -532,6 +532,39 @@ In `minimal` mode the plugin is designed for CI/CD, batch runs, and trusted repe
 
 ---
 
+## Definition of Done — mandatory completeness checklist
+
+**A run is NOT complete until every item below is satisfied.** Before closing Phase 6 and writing the final chat message, verify this checklist explicitly. If any item is missing, resolve it before proceeding — do not deliver a partial run and call it done.
+
+### Artifacts
+- [ ] Every file listed in `plan.yml → final_artifacts:` exists at its declared path and is non-empty.
+- [ ] If `produced_count < planned_count`: re-dispatch the responsible agent (spec-writer or worker) for the missing artifact. Cap retries at 2. If still missing after 2 retries, surface `status: partial` — never silently skip.
+
+### Verifier
+- [ ] `verify-report.md` exists and contains a `BLOCKING:` line.
+- [ ] `BLOCKING: 0` OR the user explicitly chose "ship as-is" / auto-fix resolved all findings.
+
+### Run report
+- [ ] `run-report.md` exists and contains: status, readiness level, archetype phases, duration, token totals, cost estimate, artifact list, verifier findings count, self-healing retries.
+- [ ] The per-agent consumption table is present and totals are internally consistent.
+
+### STATE spine
+- [ ] `run-log.md` entry updated from `in_progress` to final status (`completed | partial | aborted`).
+- [ ] `state.md` Watch List and High Priority sections reflect any open issues or decisions surfaced by this run.
+- [ ] `trace.json` saved to `.loop/traces/<ts>-<ticket_hash>.json`.
+- [ ] `plan.yml` archived to `.loop/plans/<ts>-<ticket_hash>.yml`.
+
+### External integrations (only when configured)
+- [ ] Ticket status updated (or gate set to `skip`).
+- [ ] PR created (or gate set to `skip` / branch name surfaced).
+- [ ] Notification sent (or gate disabled).
+
+**If the run must be delivered as `partial`** (e.g. budget exhausted, max retries hit, verifier findings unresolvable): surface it explicitly, list what IS present and what IS missing, and add the missing items to `state.md → ## High Priority` so the next run can pick them up.
+
+A run that silently omits artifacts, skips the verify-report, or leaves the run-log as `in_progress` is not a partial delivery — it is a broken delivery.
+
+---
+
 ## Hard rules
 
 - For document tickets (spec, research, ADR, report): spec-writer is the ONLY agent that writes the final deliverable. For development tickets (feature/bugfix/hotfix/chore/refactor): workers are the final writers; spec-writer is skipped (see Phase 5).

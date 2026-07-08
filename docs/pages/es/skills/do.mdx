@@ -33,6 +33,23 @@ NO usar para búsquedas de un solo paso o ediciones rápidas — esas se ejecuta
 
 El mensaje final en el chat siempre incluye un resumen ejecutivo y una tabla de consumo por agente (modelo, invocaciones, tiempo, tokens, costo).
 
+## Definición de Done
+
+Una corrida no está completa hasta que **todos** los elementos siguientes estén presentes. El orquestador verifica este checklist antes de entregar el mensaje final — los ítems faltantes disparan un re-despacho o un estado `partial` explícito, nunca un skip silencioso.
+
+| Ítem | Requerido |
+|---|---|
+| Cada artefacto en `final_artifacts:` existe y no está vacío | Siempre |
+| `verify-report.md` con una línea `BLOCKING:` | Siempre |
+| `run-report.md` con status, fases, tokens, costo, lista de artefactos | Siempre |
+| Tabla de consumo por agente con totales consistentes | Siempre |
+| Entrada en `run-log.md` actualizada al status final | Siempre |
+| `trace.json` guardado en `.loop/traces/` | Siempre |
+| `plan.yml` archivado en `.loop/plans/` | Siempre |
+| Status del ticket actualizado / PR creado / notificación enviada | Cuando está configurado |
+
+Si la corrida debe entregarse como `partial` (presupuesto agotado, máximo de reintentos alcanzado, findings del verifier irresolubles), el orquestador muestra exactamente qué está presente y qué falta, y agrega los ítems faltantes a `state.md → High Priority` para la siguiente corrida.
+
 ## Ejemplo
 
 ```bash

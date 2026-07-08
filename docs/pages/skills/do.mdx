@@ -33,6 +33,23 @@ Do NOT use for single-step lookups or quick edits — those run without loop ove
 
 The final chat message always includes an executive summary and a per-agent consumption table (model, invocations, time, tokens, cost).
 
+## Definition of Done
+
+A run is not complete until **all** of the following are present. The orchestrator verifies this checklist before delivering the final message — missing items trigger a re-dispatch or an explicit `partial` status, never a silent skip.
+
+| Item | Required |
+|---|---|
+| Every artifact in `final_artifacts:` exists and is non-empty | Always |
+| `verify-report.md` with a `BLOCKING:` line | Always |
+| `run-report.md` with status, phases, tokens, cost, artifact list | Always |
+| Per-agent consumption table with consistent totals | Always |
+| `run-log.md` entry updated to final status | Always |
+| `trace.json` saved to `.loop/traces/` | Always |
+| `plan.yml` archived to `.loop/plans/` | Always |
+| Ticket status updated / PR created / notification sent | When configured |
+
+If the run must be delivered as `partial` (budget exhausted, max retries hit, unresolvable verifier findings), the orchestrator surfaces exactly what is present and what is missing, and adds the missing items to `state.md → High Priority` for the next run.
+
 ## Example
 
 ```bash
