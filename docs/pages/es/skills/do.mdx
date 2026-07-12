@@ -64,6 +64,17 @@ Cuando corrés múltiples tickets (`do "MH-100 MH-101"` o `--parallel`), cada ti
 | Entrada en run-log | Una entrada por ticket |
 | Creación de PR | La Phase 7 corre independientemente por ticket — NO una sola vez para el batch |
 
+### Cómo funciona el despacho paralelo
+
+Cuando se usa `--parallel`, cada ticket se despacha como un **sub-agente independiente** que corre el protocolo completo de 8 fases de `do` por su cuenta. El orquestador padre NO corre fases ni crea PRs — solo recolecta resultados y arma la tabla resumen.
+
+```
+do (orquestador padre)
+  ├─ Agent: ticket MH-100 → loop completo → branch feature/MH-100-... → PR #444
+  ├─ Agent: ticket MH-101 → loop completo → branch feature/MH-101-... → PR #445
+  └─ tabla resumen (armada por el padre después de que ambos retornan)
+```
+
 Al final, el orquestador muestra una tabla consolidada con un PR URL por ticket:
 
 ```

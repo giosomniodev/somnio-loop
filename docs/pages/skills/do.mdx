@@ -64,6 +64,17 @@ When running multiple tickets (`do "MH-100 MH-101"` or `--parallel`), each ticke
 | run-log entry | One entry per ticket |
 | PR creation | Phase 7 runs independently per ticket — NOT once for the whole batch |
 
+### How parallel dispatch works
+
+When using `--parallel`, each ticket is dispatched as an **independent sub-agent** that runs the full 8-phase `do` protocol on its own. The parent orchestrator does NOT run phases or create PRs — it only collects results and assembles the summary.
+
+```
+do (parent orchestrator)
+  ├─ Agent: ticket MH-100 → runs full loop → branch feature/MH-100-... → PR #444
+  ├─ Agent: ticket MH-101 → runs full loop → branch feature/MH-101-... → PR #445
+  └─ summary table (assembled by parent after both return)
+```
+
 At the end the orchestrator shows a consolidated table with one PR URL per ticket:
 
 ```

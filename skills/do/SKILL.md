@@ -38,7 +38,22 @@ This is the most common multi-ticket failure mode. Each ticket MUST be fully iso
 - PR: created (or not) based on the gate config for THAT ticket's run — NOT once for the whole multi-ticket batch
 - Artifacts: written to `/tmp/loop-runs/<ts>-<ticket_id>/` — separate directory per ticket
 
-**Never** allow workers from ticket A and ticket B to share a branch, a worktree, or an output directory. When running `--parallel`, each ticket's sub-agent receives its own isolated `workdir`, `branch`, and output path. The orchestrator owns the final summary table; each ticket's loop owns its own PR creation in Phase 7.
+**Never** allow workers from ticket A and ticket B to share a branch, a worktree, or an output directory.
+
+**Multi-ticket dispatch protocol (v0.9.3 — enforcement):**
+
+For **sequential** (default): run Phases -1 through 7 for ticket A completely, then repeat for ticket B. The orchestrator loops over tickets and runs the full protocol per ticket. Phase -1 reads STATE once and shares config; every other phase is per-ticket.
+
+For **`--parallel`**: dispatch each ticket as an independent sub-agent via a single Agent tool message. Each sub-agent prompt MUST include:
+```
+- ticket_id: <unique ID>
+- workdir: /tmp/loop-runs/<ts>-<ticket_id>/
+- branch: <type>/<ticket_id>-<slug>     (computed by triage per git_flow config)
+- config_path: <repo_root>/.loop/config.yaml  (shared, read-only)
+- phases: -1 through 7 (full loop — the sub-agent IS the orchestrator for this ticket)
+```
+
+Each sub-agent runs the ENTIRE `do` protocol independently — it creates its own branch, dispatches its own workers into worktrees scoped to that branch, runs its own verifier, creates its own PR in Phase 7, and returns its own run-report. The parent orchestrator collects returned results and assembles the summary table. **The parent orchestrator NEVER creates PRs itself in multi-ticket mode — each sub-agent owns its own Phase 7.**
 
 ## Execution protocol
 
@@ -80,7 +95,9 @@ The active autonomy + per-gate config + `<mcp_tools>` are held in memory and pro
 
 #### 0a. Acknowledge the ticket
 
-In ONE sentence, restate what you understand the ticket asks for. Reference any relevant Watch List item from STATE if applicable (e.g. "This continues TKT-007 from last run"). Do not ask clarifying questions yet. If a critical input is genuinely missing (e.g. the user said "compare these tools" but listed none), and only then, ask for that single missing input.
+In ONE sentence, restate what you understand the ticket asks for. Reference any relevant Watch List item from STATE if applicable (e.g. "This continues TKT-007 from last run"). Do not ask clarifying questions yet.
+
+**Minimal preset behavior:** If a critical input is genuinely missing AND `autonomy.preset != minimal`, ask for that single missing input. If `preset: minimal`, NEVER ask — infer the best default and flag it: `⚠️ Assumed: <what you assumed> (minimal: no ask)`. The whole point of minimal is zero interaction.
 
 #### 0b. MANDATORY surface (v0.8.1 — BEFORE any sub-agent dispatch)
 

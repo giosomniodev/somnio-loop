@@ -82,7 +82,9 @@ The validator returns a structured report with:
 ### Step 7 — React to the verdict
 
 - **PASS** → emit `loop-generate-spec-report.md` and return.
-- **PASS_WITH_WARNINGS** → ask the user: `Address now` / `Keep as-is`. If addressed, fix and re-validate.
+- **PASS_WITH_WARNINGS** → consult `autonomy.preset`:
+  - If `minimal` → auto-address warnings that have a clear fix (missing version pin, vague wording with a single obvious replacement). Keep the rest as-is. Emit: `⚠️ Spec PASS_WITH_WARNINGS — auto-addressed <N>/<M> warnings (minimal: no ask)`. Do NOT call `AskUserQuestion`.
+  - Otherwise → ask the user: `Address now` / `Keep as-is`. If addressed, fix and re-validate.
 - **BLOCK** → fix required items (ask user for missing info OR rewrite directly). Re-validate. **Cap at 3 re-validation cycles.** If still blocked after 3, write the final validator report and stop with `status: blocked` — do NOT return success.
 
 ### Step 8 — Emit report
